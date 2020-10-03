@@ -270,14 +270,25 @@ fig.savefig('tkespec_' + fileappend + '.pdf')
 
 # add output of velocity u and v
 velocity_kinds = (
-	(u, 'velocity_u_{}.txt'.format(fileappend)),
-	(v, 'velocity_v_{}.txt'.format(fileappend))
+	(u, 'velocity_u_{}'.format(fileappend)),
+	(v, 'velocity_v_{}'.format(fileappend))
 )
 for v_kind in velocity_kinds:
 	velocity = v_kind[0]
-	v_file_name = v_kind[1]
+	v_file_name = v_kind[1] + '.txt'
 	with open(v_file_name, 'w') as f:
 		row_size, col_size = velocity.shape
 		for r in range(row_size):
 			r_out = " ".join([str(e) for e in u[r]])
 			f.write("{}\n".format(r_out))
+
+for v_kind in velocity_kinds:
+	velocity = v_kind[0]
+	v_file_name = v_kind[1] + '.pdf'
+	fig = plt.figure(dpi=200, constrained_layout=True)
+	plt.cla()
+	plt.imshow(velocity)
+	plt.xlabel("X")
+	plt.ylabel("Y")
+	plt.colorbar()
+	plt.savefig(v_file_name, bbox_inches='tight')
