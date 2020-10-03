@@ -144,7 +144,7 @@ dx = lx / nx
 dy = ly / ny
 
 t0 = time.time()
-u, v = isoturb.generate_isotropic_turbulence(lx, ly, nx, ny, nmodes, wn1, whichspec)
+u, v = isoturb.generate_isotropic_turbulence_2d(lx, ly, nx, ny, nmodes, wn1, whichspec)
 t1 = time.time()
 elapsed_time = t1 - t0
 print('it took me ', elapsed_time, 's to generate the isotropic turbulence.')
@@ -260,10 +260,24 @@ plt.ylabel('$E(\kappa)$ (m$^3$/s$^2$)')
 plt.grid()
 # plt.gcf().tight_layout()
 if nx == ny:
-	plt.title(str(nx) + '$^3$')
+	plt.title(str(nx) + '$^2$')
 else:
-	plt.title(str(nx) + 'x' + str(ny) + 'x' + str(nz))
+	plt.title(str(nx) + 'x' + str(ny))
 plt.legend(handles=[l1, l2], loc=1)
 # fig.savefig('tkespec_' + filespec + '_' + str(N) + '.pdf')
 fig.savefig('tkespec_' + fileappend + '.pdf')
-plt.show()
+# plt.show()
+
+# add output of velocity u and v
+velocity_kinds = (
+	(u, 'velocity_u_{}.txt'.format(fileappend)),
+	(v, 'velocity_v_{}.txt'.format(fileappend))
+)
+for v_kind in velocity_kinds:
+	velocity = v_kind[0]
+	v_file_name = v_kind[1]
+	with open(v_file_name, 'w') as f:
+		row_size, col_size = velocity.shape
+		for r in range(row_size):
+			r_out = " ".join([str(e) for e in u[r]])
+			f.write("{}\n".format(r_out))
