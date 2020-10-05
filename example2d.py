@@ -188,7 +188,7 @@ if computeMean:
 # verify that the generated velocities fit the spectrum
 knyquist, wavenumbers, tkespec = compute_tke_spectrum2d(u, v, lx, ly, False)
 # save the generated spectrum to a text file for later post processing
-np.savetxt('tkespec_' + fileappend + '.txt', np.transpose([wavenumbers, tkespec]))
+np.savetxt('output/' + 'tkespec_' + fileappend + '.txt', np.transpose([wavenumbers, tkespec]))
 
 # -------------------------------------------------------------
 # compare spectra
@@ -231,7 +231,7 @@ array_toSave[2] = meanE*100.0
 array_toSave[3] = rmsE*100.0
 
 # save time and error values in a txt file
-np.savetxt('time_error_' + fileappend + '.txt', array_toSave)
+np.savetxt('output/' + 'time_error_' + fileappend + '.txt', array_toSave)
 #np.savetxt('cpuTime_' + filespec + '_' + str(N) + '_' + str(nmodes) + '.txt',time_elapsed)
 
 # -------------------------------------------------------------
@@ -265,7 +265,7 @@ else:
 	plt.title(str(nx) + 'x' + str(ny))
 plt.legend(handles=[l1, l2], loc=1)
 # fig.savefig('tkespec_' + filespec + '_' + str(N) + '.pdf')
-fig.savefig('tkespec_' + fileappend + '.pdf')
+fig.savefig('output/' + 'tkespec_' + fileappend + '.pdf')
 # plt.show()
 
 # add output of velocity u and v
@@ -275,7 +275,7 @@ velocity_kinds = (
 )
 for v_kind in velocity_kinds:
 	velocity = v_kind[0]
-	v_file_name = v_kind[1] + '.txt'
+	v_file_name = 'output/' + v_kind[1] + '.txt'
 	with open(v_file_name, 'w') as f:
 		row_size, col_size = velocity.shape
 		for r in range(row_size):
@@ -284,7 +284,7 @@ for v_kind in velocity_kinds:
 
 for v_kind in velocity_kinds:
 	velocity = v_kind[0]
-	v_file_name = v_kind[1] + '.pdf'
+	v_file_name = 'output/' + v_kind[1] + '.pdf'
 	fig = plt.figure(dpi=200, constrained_layout=True)
 	plt.cla()
 	plt.imshow(velocity)
