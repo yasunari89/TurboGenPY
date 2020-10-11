@@ -56,7 +56,7 @@ class vkp_spectrum:
     espec = Alpha*urms*urms/ Kappae * pow(r1,4)/pow(1.0 + r1*r1,17.0/6.0)*np.exp(-2.0*r2*r2)
     return espec
 
-class homogeneous_istropic_spectrum:
+class homogeneous_isotropic_spectrum:
   def __init__(self, urms=0.25, integral_scale=1e-3) -> None:
     self.urms = urms
     self.ke = 8/(3*integral_scale) * pow(2/pi, 1/2)

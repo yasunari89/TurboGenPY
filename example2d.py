@@ -88,7 +88,7 @@ if m:
 
 
 # specify which spectrum you want to use. Options are: cbc_spec, vkp_spec, and power_spec
-inputspec = 'homogeneous_istropic'
+inputspec = 'cbc'
 if args.spectrum:
 	inputspec = args.spectrum
 
@@ -96,7 +96,7 @@ if args.spectrum:
 fileappend = inputspec + '_' + str(nx) + '.' + str(ny) + '_' + str(nmodes) + '_modes'
 
 print('input spec', inputspec)
-if inputspec != 'cbc' and inputspec != 'vkp' and inputspec != 'kcm' and inputspec != 'homogeneous_istropic':
+if inputspec != 'cbc' and inputspec != 'vkp' and inputspec != 'kcm' and inputspec != 'homogeneous_isotropic':
 	print('Error: ', inputspec, ' is not a supported spectrum. Supported spectra are: cbc, vkp, and power. Please revise your input.')
 	exit()
 inputspec += '_spectrum'
