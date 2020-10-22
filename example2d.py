@@ -13,14 +13,14 @@ import argparse
 import numpy as np
 from scipy import integrate
 import matplotlib.pyplot as plt
-from fileformats import FileFormats
 from tkespec import compute_tke_spectrum2d
 
 
 __author__ = 'Tony Saad'
 
-
 pi = np.pi
+energy_spectrums = ['cbc', 'vkp', 'kcm', 'homogeneous_isotropic']
+
 if not os.path.isdir('./output'):
     os.mkdir('output')
 
@@ -43,20 +43,21 @@ parser.add_argument(
     '-l',
     '--length',
     default=[9 * 2.0 * pi / 100.0] * 2,
-    nargs='+',
+    nargs=2,
     type=float,
     help="Domain size, lx ly (default is 0.18pi x 0.18pi)")
 parser.add_argument(
     '-n',
     '--res',
     default=[64, 64],
-    nargs='+',
+    nargs=2,
     type=int,
     help="Grid resolution, nx ny (default is 64 x 64)")
 parser.add_argument(
     '-m',
     '--modes',
     default=10000,
+    nargs=1,
     type=int,
     help="Number of modes")
 parser.add_argument(
@@ -75,111 +76,58 @@ parser.add_argument(
 parser.add_argument(
     '-o',
     '--output',
+    default=False,
     required=False,
     action='store_true',
     help="Write data to disk")
 parser.add_argument(
     '-spec',
     '--spectrum',
-    default='cbc',
+    default=['cbc'],
+    nargs=1,
     type=str,
     help="Select spectrum. Defaults to cbc. Other options include: vkp, kcm and homogeneous istropic.")
 
 args = parser.parse_args()
 
-# parse grid resolution (nx, ny, nz).
-nx = 64
-ny = 64
-
-if args.res:
-    N = args.res
-    if len(N) == 1:
-        nx = ny = N[0]
-    else:
-        nx = N[0]
-        ny = N[1]
-
 # Default values for domain size in the x, y, and z directions. This value is typically
 # based on the largest length scale that your data has. For the cbc data,
 # the largest length scale corresponds to a wave number of 15, hence, the
 # domain size is L = 2pi/15.
-lx = 9 * 2.0 * pi / 100.0
-ly = 9 * 2.0 * pi / 100.0
+lx = args.length[0]
+ly = args.length[1]
 
-# parse domain length, lx, ly, and lz
-L = args.length
-if L:
-    if len(L) == 1:
-        lx = ly = L[0]
-    elif len(L) == 2:
-        lx = L[0]
-        ly = L[1]
+nx = args.res[0]
+ny = args.res[1]
 
-# parse number of modes
-nmodes = 10000
-m = args.modes
-if m:
-    nmodes = int(m)
-    print(m)
-
-
-# specify which spectrum you want to use. Options are: cbc_spec, vkp_spec,
-# and power_spec
-inputspec = 'cbc'
-if args.spectrum:
-    inputspec = args.spectrum
+nmodes = args.modes
+inputspec = args.spectrum[0]
 
 # specify the spectrum name to append to all output filenames
-fileappend = inputspec + '_' + \
-    str(nx) + '.' + str(ny) + '_' + str(nmodes) + '_modes'
+fileappend = "{}_spec_{}x{}_{}x{}_{}_modes".format(
+    inputspec, lx, ly, nx, ny, nmodes)
 
-print('input spec', inputspec)
-if inputspec != 'cbc' and inputspec != 'vkp' and inputspec != 'kcm' and inputspec != 'homogeneous_isotropic':
-    print(
-        'Error: ',
-        inputspec,
-        ' is not a supported spectrum. Supported spectra are: cbc, vkp, homogeneous isotropic and power. Please revise your input.')
-    exit()
-inputspec += '_spectrum'
+if inputspec not in energy_spectrums:
+    raise Exception(
+        "{} is not a supported spectrum. Supported spectrums: {}".format(
+            inputspec, ", ".join(energy_spectrums)))
+
 # now given a string name of the spectrum, find the corresponding function with the same name.
 # use locals() because spectrum functions are defined in this module.
-# whichspec = locals()[inputspec]
-# whichspec = spectra.cbc_spectrum().evaluate
-whichspec = getattr(spectra, inputspec)().evaluate
-
-# write to file
-enableIO = False  # enable writing to file
-io = args.output
-if io:
-    enableIO = io
-# Specify the file format supported formats are: FLAT, IJK, XYZ
-fileformat = FileFormats.FLAT
-
-# save the velocity field as a matlab matrix (.mat)
-savemat = False
-
-# compute the mean of the fluctuations for verification purposes
-computeMean = True
-
-# check the divergence of the generated velocity field
-checkdivergence = False
+whichspec = getattr(spectra, '{}_spectrum'.format(inputspec))().evaluate
 
 # enter the smallest wavenumber represented by this spectrum
 wn1 = min(2.0 * pi / lx, 2.0 * pi / ly)
-# wn1 = 15  # determined here from cbc spectrum properties
 
-# summarize user input
-print('-----------------------------------')
-print('SUMMARY OF USER INPUT:')
-print('Domain size:', lx, ly)
-print('Grid resolution:', nx, ny)
-print('Fourier accuracy (modes):', nmodes)
-print(f"Smallest wave number: {wn1}")
+print(
+    "\n---------------------SUMMARY OF USER INPUT---------------------\n"
+    "Domain size: {} x {}\n"
+    "Grid resolution: {} x {}\n"
+    "Fourier accuracy (modes): {}\n"
+    "Energy spectrum: {} (smallest wave number: {})\n"
+    "---------------------------------------------------------------".format(
+        lx, ly, nx, ny, nmodes, inputspec, wn1))
 
-
-# ------------------------------------------------------------------------------
-# END USER INPUT
-# ------------------------------------------------------------------------------
 
 # input number of cells (cell centered control volumes). This will
 # determine the maximum wave number that can be represented on this grid.
@@ -196,24 +144,23 @@ print('it took me ', elapsed_time, 's to generate the isotropic turbulence.')
 
 
 # compute mean velocities
-if computeMean:
-    umean = np.mean(u)
-    vmean = np.mean(v)
+umean = np.mean(u)
+vmean = np.mean(v)
 
-    print('mean u = ', umean)
-    print('mean v = ', vmean)
+print('mean u = ', umean)
+print('mean v = ', vmean)
 
-    ufluc = umean - u
-    vfluc = vmean - v
+ufluc = umean - u
+vfluc = vmean - v
 
-    print('mean u fluct = ', np.mean(ufluc))
-    print('mean v fluct = ', np.mean(vfluc))
+print('mean u fluct = ', np.mean(ufluc))
+print('mean v fluct = ', np.mean(vfluc))
 
-    ufrms = np.mean(ufluc * ufluc)
-    vfrms = np.mean(vfluc * vfluc)
+ufrms = np.mean(ufluc * ufluc)
+vfrms = np.mean(vfluc * vfluc)
 
-    print('u fluc rms = ', np.sqrt(ufrms))
-    print('v fluc rms = ', np.sqrt(vfrms))
+print('u fluc rms = ', np.sqrt(ufrms))
+print('v fluc rms = ', np.sqrt(vfrms))
 
 # verify that the generated velocities fit the spectrum
 knyquist, wavenumbers, tkespec = compute_tke_spectrum2d(u, v, lx, ly, False)
@@ -269,7 +216,8 @@ array_toSave[3] = rmsE * 100.0
 
 # save time and error values in a txt file
 np.savetxt('output/' + 'time_error_' + fileappend + '.txt', array_toSave)
-# np.savetxt('cpuTime_' + filespec + '_' + str(N) + '_' + str(nmodes) + '.txt',time_elapsed)
+# np.savetxt('cpuTime_' + filespec + '_' + str(N) + '_' + str(nmodes) +
+# '.txt',time_elapsed)
 
 # -------------------------------------------------------------
 # plt.figure()
