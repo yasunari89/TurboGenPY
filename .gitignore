@@ -3,3 +3,4 @@ _static
 _templates
 __pycache__
 output
+.vscode
