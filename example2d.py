@@ -61,26 +61,6 @@ parser.add_argument(
     type=int,
     help="Number of modes")
 parser.add_argument(
-    '-gpu',
-    '--cuda',
-    required=False,
-    action='store_true',
-    help="Use a GPU if availalbe")
-parser.add_argument(
-    '-mp',
-    '--multiprocessor',
-    required=False,
-    nargs='+',
-    type=int,
-    help="Use the multiprocessing package")
-parser.add_argument(
-    '-o',
-    '--output',
-    default=False,
-    required=False,
-    action='store_true',
-    help="Write data to disk")
-parser.add_argument(
     '-spec',
     '--spectrum',
     default=['cbc'],
