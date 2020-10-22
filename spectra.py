@@ -33,10 +33,11 @@ class cbc_spectrum:
     return self.especf(k)
 
 class vkp_spectrum:
-  def __init__(self,ke=40.0,nu=1.0e-5,urms=0.25):
+  def __init__(self,ke=40.0,nu=1.0e-5,urms=4.18,integral_scale=1e-2):
     self.nu = nu
     self.urms = urms
-    self.ke = ke
+    # self.ke = ke
+    self.ke = 8/(3*integral_scale) * pow(2/pi, 1/2)
     self.kmin = 0
     self.kmax = 1e6
   def evaluate(self, k):
@@ -57,7 +58,7 @@ class vkp_spectrum:
     return espec
 
 class homogeneous_isotropic_spectrum:
-  def __init__(self, urms=0.25, integral_scale=1e-3) -> None:
+  def __init__(self, urms=4.18, integral_scale=1e-2):
     self.urms = urms
     self.ke = 8/(3*integral_scale) * pow(2/pi, 1/2)
   def evaluate(self, k) -> float:

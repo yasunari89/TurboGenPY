@@ -11,6 +11,7 @@ import numpy as np
 from numpy import pi
 import time
 import scipy.io
+from spectra import homogeneous_isotropic_spectrum
 from tkespec import compute_tke_spectrum2d
 import isoturb
 import isoturbo
@@ -51,7 +52,7 @@ parser.add_argument('-o'  , '--output', help='Write data to disk', required = Fa
 parser.add_argument('-spec', '--spectrum', help='Select spectrum. Defaults to cbc. Other options include: vkp, and kcm.', required = False, type=str)
 args = parser.parse_args()
 
-# parse grid resolution (nx, ny, nz). defaults to 32^3
+# parse grid resolution (nx, ny, nz).
 nx = 64
 ny = 64
 
@@ -97,7 +98,7 @@ fileappend = inputspec + '_' + str(nx) + '.' + str(ny) + '_' + str(nmodes) + '_m
 
 print('input spec', inputspec)
 if inputspec != 'cbc' and inputspec != 'vkp' and inputspec != 'kcm' and inputspec != 'homogeneous_isotropic':
-	print('Error: ', inputspec, ' is not a supported spectrum. Supported spectra are: cbc, vkp, and power. Please revise your input.')
+	print('Error: ', inputspec, ' is not a supported spectrum. Supported spectra are: cbc, vkp, homogeneous isotropic and power. Please revise your input.')
 	exit()
 inputspec += '_spectrum'
 # now given a string name of the spectrum, find the corresponding function with the same name. use locals() because spectrum functions are defined in this module.
@@ -131,6 +132,7 @@ print('SUMMARY OF USER INPUT:')
 print('Domain size:', lx, ly)
 print('Grid resolution:', nx, ny)
 print('Fourier accuracy (modes):', nmodes)
+print(f"Smallest wave number: {wn1}")
 
 
 # ------------------------------------------------------------------------------
@@ -174,19 +176,11 @@ if computeMean:
 	print('u fluc rms = ', np.sqrt(ufrms))
 	print('v fluc rms = ', np.sqrt(vfrms))
 
-
-# check divergence
-# if checkdivergence:
-#     count = 0
-# 	for j in range(0, ny - 1):
-# 		for i in range(0, nx - 1):
-# 			src = (u[i + 1, j, k] - u[i, j, k]) / dx + (v[i, j + 1, k] - v[i, j, k]) / dy + (w[i, j, k + 1]
-# 			if src > 1e-2:
-# 				count += 1
-#     print('cells with divergence: ', count)
-
 # verify that the generated velocities fit the spectrum
 knyquist, wavenumbers, tkespec = compute_tke_spectrum2d(u, v, lx, ly, False)
+print(f"Knyquist: {knyquist}")
+print(f"Wave numbers shape: {wavenumbers.shape}")
+print(f"Discrete sperctrum shape: {tkespec.shape}")
 # save the generated spectrum to a text file for later post processing
 np.savetxt('output/' + 'tkespec_' + fileappend + '.txt', np.transpose([wavenumbers, tkespec]))
 
@@ -194,7 +188,7 @@ np.savetxt('output/' + 'tkespec_' + fileappend + '.txt', np.transpose([wavenumbe
 # compare spectra
 # integral comparison:
 # find index of nyquist limit
-idx = (np.where(wavenumbers == knyquist)[0][0]) - 2
+idx = (np.where(wavenumbers >= knyquist)[0][0]) - 2
 
 # km0 = 2.0 * np.pi / lx
 # km0 is the smallest wave number
@@ -205,7 +199,7 @@ km0 = wn1
 #exactRange = km0 + np.arange(0, exactm + 1) * dk0
 dk = wavenumbers[1] - wavenumbers[0]
 exactE = integrate.trapz(whichspec(wavenumbers[1:idx]), dx=dk)
-print(exactE)
+print(f"exactE: {exactE}")
 numE = integrate.trapz(tkespec[1:idx], dx=dk)
 diff = np.abs((exactE - numE)/exactE)
 integralE = diff*100.0
@@ -213,12 +207,15 @@ print('Integral Error = ', integralE, '%')
 
 # analyze how well we fit the input spectrum
 # compute the RMS error committed by the generated spectrum
-exact = whichspec(wavenumbers[4:idx])
-num = tkespec[4:idx]
+start_measure_index = 10
+print(f"Start measure index: {start_measure_index}, "\
+		f"Wave number of the index: {wavenumbers[start_measure_index]}")
+exact = whichspec(wavenumbers[start_measure_index:idx])
+num = tkespec[start_measure_index:idx]
 diff = np.abs((exact - num) / exact)
 meanE = np.mean(diff)
 
-print('Mean Error = ', meanE * 100.0, '%')
+print(f"Mean Error = {meanE * 100} %")
 rmsE = np.sqrt(np.mean(diff * diff))
 print('RMS Error = ', rmsE * 100, '%')
 
@@ -244,16 +241,13 @@ np.savetxt('output/' + 'time_error_' + fileappend + '.txt', array_toSave)
 # plt.rc('text', usetex=True)
 plt.rc("font", size=10, family='serif')
 
-fig = plt.figure(figsize=(3.5, 2.8), dpi=200, constrained_layout=True)
+fig = plt.figure(figsize=(4.5, 3.8), dpi=200, constrained_layout=True)
 
-wnn = np.arange(wn1, 2000)
+wnn = np.arange(wn1, wavenumbers[-1]+1000)
 
 l1, = plt.loglog(wnn, whichspec(wnn), 'k-', label='input')
 l2, = plt.loglog(wavenumbers[1:6], tkespec[1:6], 'bo--', markersize=3, markerfacecolor='w', markevery=1, label='computed')
 plt.loglog(wavenumbers[5:], tkespec[5:], 'bo--', markersize=3, markerfacecolor='w', markevery=4, label='computed')
-plt.axis([8, 10000, 1e-7, 1e-2])
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
 plt.axvline(x=knyquist, linestyle='--', color='black')
 plt.xlabel('$\kappa$ (1/m)')
 plt.ylabel('$E(\kappa)$ (m$^3$/s$^2$)')
@@ -279,7 +273,8 @@ for v_kind in velocity_kinds:
 	with open(v_file_name, 'w') as f:
 		row_size, col_size = velocity.shape
 		for r in range(row_size):
-			r_out = " ".join([str(e) for e in u[r]])
+			# m/s --> cm/s
+			r_out = " ".join([str(100*e) for e in u[r]])
 			f.write("{}\n".format(r_out))
 
 for v_kind in velocity_kinds:
